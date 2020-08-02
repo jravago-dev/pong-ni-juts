@@ -1,0 +1,374 @@
+<html>
+<head>
+    <title>Canvas Game</title>
+    <style>
+        body {
+            width: 100%;
+            height: 100%;
+            display: block;
+            position: relative;
+            overflow: auto;
+            margin: 0;
+            padding: 0;
+            background: #111;
+            color: #fff;
+            font-family: 'VT323', monospace;
+            min-width: 800px;
+            min-height: 600px;
+        }
+
+        .wrapper {
+            width: 100%;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .wrapper h1 {
+            text-align: center;
+        }
+
+        .wrapper .splashScreen {
+            display: none;
+            text-align: center;
+
+        }
+
+        .splashScreen {
+            font-size: 3em;
+            width: 100%;
+            color: limegreen;
+            min-width: 800px;
+            min-height: 600px;
+        }
+
+        .wrapper .continue {
+            margin-top: 40px;
+        }
+
+        #gameCanvas {
+            display: block;
+            margin: 10px auto 0;
+        }
+
+        .pixel {
+            font-size: 25px;
+            color: white;
+            height: auto;
+            margin: 10px;
+            font-family: 'VT323';
+
+            position: relative;
+            display: inline-block;
+            vertical-align: top;
+            text-transform: uppercase;
+
+            cursor: pointer;
+
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .pixel:active {
+            top: 2px;
+        }
+
+        .pixel {
+            line-height: 0;
+
+            image-rendering: optimizeSpeed;
+            image-rendering: -moz-crisp-edges; /* Firefox */
+            image-rendering: -o-crisp-edges; /* Opera */
+            image-rendering: -webkit-optimize-contrast; /* Webkit (non-standard naming) */
+            image-rendering: crisp-edges;
+            -ms-interpolation-mode: nearest-neighbor; /* IE (non-standard property) */
+
+            border-style: solid;
+            border-width: 20px;
+            -moz-border-image: url(https://i.imgur.com/sREM8Yn.png) 20 stretch;
+            -webkit-border-image: url(https://i.imgur.com/sREM8Yn.png) 20 stretch;
+            -o-border-image: url(https://i.imgur.com/sREM8Yn.png) 20 stretch;
+            border-image: url(https://i.imgur.com/sREM8Yn.png) 20 stretch;
+
+            margin-top: 100px;
+        }
+
+        .pixel p {
+            display: inline-block;
+            vertical-align: top;
+            position: relative;
+            width: auto;
+            text-align: center;
+            margin: -20px -20px;
+            line-height: 20px;
+            padding: 10px 20px;
+
+            background: #000000;
+            background: linear-gradient(135deg, transparent 10px, #000000 0) top left,
+            linear-gradient(225deg, transparent 10px, #000000 0) top right,
+            linear-gradient(315deg, transparent 10px, #000000 0) bottom right,
+            linear-gradient(45deg, transparent 10px, #000000 0) bottom left;
+            background-size: 50% 50%;
+            background-repeat: no-repeat;
+            background-image: radial-gradient(circle at 0 0, rgba(204, 0, 0, 0) 14px, #000000 15px),
+            radial-gradient(circle at 100% 0, rgba(204, 0, 0, 0) 14px, #000000 15px),
+            radial-gradient(circle at 100% 100%, rgba(204, 0, 0, 0) 14px, #000000 15px),
+            radial-gradient(circle at 0 100%, rgba(204, 0, 0, 0) 14px, #000000 15px);
+        }
+
+        #winnerName {
+            animation: blinkingText 1s infinite;
+        }
+
+        @keyframes blinkingText {
+            0% {
+                color: limegreen;
+            }
+            49% {
+                color: transparent;
+            }
+            50% {
+                color: transparent;
+            }
+            99% {
+                color: transparent;
+            }
+            100% {
+                color: #000;
+            }
+        }
+
+        .scores {
+            background: #222;
+            height: 35px;
+            width: 45.5%;
+            margin: 0 auto;
+            font-size: 2em;
+            color: #fff;
+        }
+
+        .playerScore, .playerName {
+            float: left;
+            margin-left: 10px;
+        }
+
+        .computerScore, .computerName {
+            float: right;
+            margin-right: 10px;
+        }
+
+
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+    <h1>Pong ni Juts</h1>
+    <p>First player to reach 5 points - wins!</p>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div class="splashScreen">
+        <span id="winnerName"></span> <br/>
+        <div class="pixel" onclick="handleClick()"><p>Click to Continue</p></div>
+    </div>
+    <div class="scores">
+        <span class="playerName">You:</span><span class="playerScore">0</span>
+       <span class="computerScore">0</span> <span class="computerName">Computer:</span>
+    </div>
+</div>
+
+</body>
+<script>
+    let canvas, canvasContext;
+
+    let ballPosX = 50, ballPosY = 50;
+    let ballSpeedX = 10, ballSpeedY = 5;
+
+    let playerPaddle = 250, computerPaddle = 250;
+    let playerScore = 0, computerScore = 0;
+
+    let showSplashScreen = false;
+
+    const PADDLE_HEIGHT = 100;
+    const PADDLE_THICKNESS = 10;
+    const WINNING_SCORE = 5;
+
+    window.onload = () => {
+        canvas = document.getElementById('gameCanvas');
+        canvasContext = canvas.getContext('2d');
+
+        let fps = 60;
+        setInterval(() => {
+            moveBall();
+            drawPongBoard();
+        }, 1000 / fps);
+
+        canvas.addEventListener('mousedown', handleClick);
+
+        canvas.addEventListener('mousemove', (evt) => {
+            let mousePosition = calculateMousePosition(evt);
+            playerPaddle = mousePosition.y - (PADDLE_HEIGHT / 2);
+        })
+    }
+
+    handleClick = () => {
+        if (showSplashScreen) {
+            playerScore = 0;
+            computerScore = 0;
+
+            const winnerDiv = document.querySelector(".splashScreen");
+            const canvasDiv = document.querySelector("#gameCanvas");
+            const scoreDiv = document.querySelector(".scores");
+            const playerScoreDiv = document.querySelector(".playerScore");
+            const computerScoreDiv = document.querySelector(".computerScore")
+
+
+            winnerDiv.style.display = 'none';
+            canvasDiv.style.display = 'block';
+            scoreDiv.style.display = 'block';
+
+            playerScoreDiv.innerHTML = "0";
+            computerScoreDiv.innerHTML = "0";
+
+
+            showSplashScreen = false;
+        }
+    }
+
+    moveBall = () => {
+
+        if (showSplashScreen) {
+            return;
+        }
+        moveEnemyPaddle();
+
+        ballPosX += ballSpeedX;
+        ballPosY += ballSpeedY;
+
+        // scores
+        const playerScoreDiv = document.querySelector(".playerScore");
+        const computerScoreDiv = document.querySelector(".computerScore")
+
+
+        if (ballPosX < 0) {
+            if (ballPosY > playerPaddle && ballPosY < (playerPaddle + PADDLE_HEIGHT)) {
+                ballSpeedX = -ballSpeedX;
+
+                let playerBallTraction = ballPosY - (playerPaddle + PADDLE_HEIGHT / 2);
+                ballSpeedY = playerBallTraction * 0.36;
+
+            } else {
+                computerScore++;
+                computerScoreDiv.innerHTML = computerScore;
+                resetBall();
+            }
+        }
+        if (ballPosX > canvas.width) {
+            if (ballPosY > computerPaddle && ballPosY < (computerPaddle + PADDLE_HEIGHT)) {
+                ballSpeedX = -ballSpeedX;
+
+                let computerBallTraction = ballPosY - (computerPaddle + PADDLE_HEIGHT / 2);
+                ballSpeedY = computerBallTraction * 0.36;
+
+            } else {
+                playerScore++;
+                playerScoreDiv.innerHTML = playerScore;
+                resetBall();
+            }
+        }
+        if (ballPosY < 0) {
+            ballSpeedY = -ballSpeedY;
+        }
+        if (ballPosY > canvas.height) {
+            ballSpeedY = -ballSpeedY;
+        }
+
+
+    }
+
+    resetBall = () => {
+        if (playerScore >= WINNING_SCORE || computerScore >= WINNING_SCORE) {
+            showSplashScreen = true;
+        }
+
+        ballSpeedX = -ballSpeedX;
+        ballPosX = canvas.width / 2;
+        ballPosY = canvas.height / 2;
+    }
+
+    drawPongBoard = () => {
+
+        drawRect(0, 0, canvas.width, canvas.height, 'black');
+
+        if (showSplashScreen) {
+            const winnerDiv = document.querySelector(".splashScreen");
+            const canvasDiv = document.querySelector("#gameCanvas");
+            const scoreDiv = document.querySelector(".scores");
+
+            winnerDiv.style.display = 'block';
+            canvasDiv.style.display = 'none';
+            scoreDiv.style.display = 'none';
+
+            const winnerName = document.querySelector('#winnerName');
+
+            if (playerScore >= WINNING_SCORE) {
+                winnerName.innerHTML = 'You Won!';
+
+            } else if (computerScore >= WINNING_SCORE) {
+                winnerName.innerHTML = 'Computer Won!';
+            }
+
+            return;
+        }
+
+        drawRect(0, playerPaddle, PADDLE_THICKNESS, PADDLE_HEIGHT, 'white');
+        drawRect(canvas.width - PADDLE_THICKNESS, computerPaddle, PADDLE_THICKNESS, PADDLE_HEIGHT, 'red');
+        drawBall(ballPosX, ballPosY, 10);
+
+        for (let i = 0; i < canvas.height; i += 36) {
+            drawRect(canvas.width / 2 - 1, i, 2, 20, 'white');
+        }
+
+    }
+
+    drawBall = (centerX, centerY, ballRadius) => {
+        canvasContext.fillStyle = 'white';
+        canvasContext.beginPath();
+        canvasContext.arc(centerX, centerY, ballRadius, 0, Math.PI * 2, true);
+        canvasContext.fill();
+    }
+
+    drawRect = (posX, posY, rectWidth, rectHeight, rectColor) => {
+        canvasContext.fillStyle = rectColor;
+        canvasContext.fillRect(posX, posY, rectWidth, rectHeight);
+    }
+
+    calculateMousePosition = (event) => {
+        let rect = canvas.getBoundingClientRect();
+        let root = document.documentElement;
+
+        let mouseX = event.clientX - rect.left - root.scrollLeft;
+        let mouseY = event.clientY - rect.top - root.scrollTop;
+
+        return {
+            x: mouseX,
+            y: mouseY
+        };
+    }
+
+    moveEnemyPaddle = () => {
+        let computerCenterPaddle = computerPaddle + (PADDLE_HEIGHT / 2);
+
+        if (computerCenterPaddle < ballPosY - 36) {
+            computerPaddle += 6;
+        } else if (computerCenterPaddle > ballPosY + 36) {
+            computerPaddle -= 6;
+        }
+    }
+
+
+</script>
+</html>
